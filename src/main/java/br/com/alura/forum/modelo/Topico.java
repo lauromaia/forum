@@ -32,6 +32,15 @@ import javax.persistence.OneToMany;
 	@OneToMany(mappedBy = "topico")
 	private List<Resposta> respostas = new ArrayList<Resposta>();
 	
+	public Topico(String titulo, String mensagem, Curso curso) {
+		this.titulo = titulo;
+		this.mensagem = mensagem;
+		this.curso = curso;
+	}
+	
+	public Topico() {
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
