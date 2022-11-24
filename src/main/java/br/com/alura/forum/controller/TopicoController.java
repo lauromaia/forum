@@ -8,6 +8,12 @@ import javax.transaction.Transactional;
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -41,13 +48,15 @@ public class TopicoController {
 	private CursoRepository cursoRepository;
 	
 	@GetMapping
-	public List<TopicoDto> topicos(String nomeCurso){
+	@Cacheable(value = "listaTopicos")
+	public Page<TopicoDto> topicos(@RequestParam(required = false) String nomeCurso, 
+		@PageableDefault(size = 10, sort = "id", direction = Direction.DESC) Pageable paginacao){
 		if(nomeCurso == null) {
-			List<Topico> topicos = topicoRepository.findAll();
+			Page<Topico> topicos = topicoRepository.findAll(paginacao);
 			return TopicoDto.converter(topicos);	
 		}
 		else {
-			List<Topico> topicos = topicoRepository.findByCursoNome(nomeCurso);
+			Page<Topico> topicos = topicoRepository.findByCursoNome(nomeCurso, paginacao);
 			return TopicoDto.converter(topicos);
 		}
 	}
@@ -73,15 +82,16 @@ public class TopicoController {
 	}
 	
 	@GetMapping("/{id}")	
+	@CacheEvict(value = "listaTopicos", allEntries = true)
 	public ResponseEntity<DetalhesTopicoDto> detalhes(@PathVariable Long id){
-		Topico topico = topicoRepository.getReferenceById(id);
-		if(topico != null){
+		Optional<Topico> topico = topicoRepository.findById(id);
+		if(topico.isPresent()){
 			
-			return ResponseEntity.notFound().build();
+			return ResponseEntity.ok(new DetalhesTopicoDto((Topico) topico.get()));
 			
 		}else {
+			return ResponseEntity.notFound().build();
 			
-			return ResponseEntity.ok(new DetalhesTopicoDto((Topico) topico));
 		}
 	}
 	
